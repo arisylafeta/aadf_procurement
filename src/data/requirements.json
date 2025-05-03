@@ -1,0 +1,284 @@
+{
+  "price": {
+    "weight": 0.35,
+    "ceiling": 300000,
+    "normalized": true
+  },
+  "core": {
+    "description": "Business registration and compliance documents required for bidding.",
+    "documents": [
+      {
+        "name": "Business registration number",
+        "required": true
+      },
+      {
+        "name": "License",
+        "required": true
+      },
+      {
+        "name": "Criminal record certificate",
+        "required": true
+      },
+      {
+        "name": "Certificate of no pending lawsuit",
+        "required": true
+      },
+      {
+        "name": "Certificate of good standing",
+        "required": true
+      },
+      {
+        "name": "Tax clearance",
+        "required": true
+      },
+      {
+        "name": "Copies of financial statements of 2023 and turnover certificates",
+        "required": true
+      },
+      {
+        "name": "Payroll Documentation",
+        "required": true
+      },
+      {
+        "name": "Contracts of outsourced staff",
+        "required": false
+      }
+    ]
+  },
+  "experience": [
+    {
+      "similar_projects": {
+        "weight": 0.3,
+        "description": "Experience of the company and its experts in similar projects",
+        "completers": [
+          "company"
+        ],
+        "subcriteria": [
+          {
+            "name": "Minimum Contract Fulfillment",
+            "subcriteria_weight": 0.60,
+            "description": "Based on meeting min 3 similar contracts, at least one involving intervention in natural parks, lakes surroundings, pedestrian trails, cyclist trails, including 1 > 50% ceiling value."
+          },
+          {
+            "name": "Additional Similar Contracts",
+            "subcriteria_weight": 0.40,
+            "description": "Points for relevant contracts beyond the minimum (two worth 10 points each)."
+          }
+        ]
+      }
+    },
+    {
+      "urban_trails": {
+        "weight": 0.1,
+        "description": "Number of urban trails designed by the company and its experts",
+        "completers": [
+          "company",
+          "expert"
+        ]
+      }
+    }
+  ],
+  "team": {
+    "criteria_weight": 0.25,
+    "description": "Required and optional team and their qualifications and weights",
+    "key_experts": {
+      "required": true,
+      "experts": [
+        {
+          "role": "Landscape Architect / Architect",
+          "required_license": [
+            "2 d"
+          ],
+          "experience_min": 10,
+          "weight": 0.3,
+          "education": "University degree in landscape architecture/architecture/urban design.",
+          "documents": [
+            {
+              "name": "CV",
+              "required": true
+            },
+            {
+              "name": "Diplomas",
+              "required": true
+            },
+            {
+              "name": "Credentials",
+              "types": [
+                "license",
+                "certificates",
+                "qualification"
+              ],
+              "required": true
+            }
+          ]
+        },
+        {
+          "role": "Urban Planer",
+          "required_license": [
+            "1 b"
+          ],
+          "experience_min": 10,
+          "weight": 0.25,
+          "education": "University degree in urban planning/city planning/urban design.",
+          "documents": [
+            {
+              "name": "CV",
+              "required": true
+            },
+            {
+              "name": "Diplomas",
+              "required": true
+            },
+            {
+              "name": "Credentials",
+              "types": [
+                "license",
+                "certificates",
+                "qualification"
+              ],
+              "required": true
+            }
+          ]
+        },
+        {
+          "role": "Civil Construction Engineer",
+          "required_license": [
+            "3 a",
+            "3 b-2",
+            "3 c-1",
+            "3 c-2",
+            "3 d",
+            "3 e"
+          ],
+          "experience_min": 10,
+          "weight": 0.25,
+          "education": "university degree in civil engineering for infrastructure/transportation planning.",
+          "documents": [
+            {
+              "name": "CV",
+              "required": true
+            },
+            {
+              "name": "Diplomas",
+              "required": true
+            },
+            {
+              "name": "Credentials",
+              "types": [
+                "license",
+                "certificates",
+                "qualification"
+              ],
+              "required": true
+            }
+          ]
+        },
+        {
+          "role": "Traffic Planner",
+          "required_license": [
+            "6 a",
+            "6 b",
+            "11 a",
+            "11 d"
+          ],
+          "experience_min": 10,
+          "weight": 0.2,
+          "education": "University degree in transportation planning/civil engineering for infrastructure/urban planning.",
+          "documents": [
+            {
+              "name": "CV",
+              "required": true
+            },
+            {
+              "name": "Diplomas",
+              "required": true
+            },
+            {
+              "name": "Credentials",
+              "types": [
+                "license",
+                "certificates",
+                "qualification"
+              ],
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    "optional_experts": {
+      "required": false,
+      "experts": [
+        {
+          "role": "Environmental Expert",
+          "requirements": "License issued by the relevant authorities, to perform ESIA."
+        },
+        {
+          "role": "Cultural Heritage Expert",
+          "required_license": [
+            "P/A-2",
+            "P/A-6",
+            "P/A-7"
+          ]
+        },
+        {
+          "role": "Bridge Construction Expert",
+          "required_license": [
+            "7 a",
+            "7 b",
+            "7 c",
+            "7 d"
+          ]
+        },
+        {
+          "role": "Road Signage Expert",
+          "required_license": [
+            "11 a",
+            "11 b",
+            "11 d"
+          ]
+        },
+        {
+          "role": "Geology Expert",
+          "required_license": [
+            "9 a",
+            "9 d",
+            "9 e"
+          ]
+        },
+        {
+          "role": "Topography Expert",
+          "required_license": [
+            "8 a",
+            "8 b",
+            "8 c",
+            "8 d",
+            "8 e"
+          ]
+        },
+        {
+          "role": "Electrical Engineer",
+          "required_license": [
+            "4 c",
+            "4 i",
+            "4 j",
+            "11 d"
+          ]
+        },
+        {
+          "role": "Hydro-Technical Engineer",
+          "required_license": [
+            "5 a",
+            "5 b",
+            "5 c",
+            "5 d"
+          ]
+        },
+        {
+          "role": "Cost Estimation Engineer",
+          "required_license": []
+        }
+      ]
+    }
+  }
+}
