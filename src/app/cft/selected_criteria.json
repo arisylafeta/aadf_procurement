@@ -1,0 +1,149 @@
+{
+  "selected_sections": {
+    "CORES": {
+      "description": "Business registration and compliance documents required for bidding.",
+      "requirements": [
+        {
+          "name": "Business registration number"
+        },
+        {
+          "name": "License",
+          "dropbox": true
+        },
+        {
+          "name": "Criminal record certificate",
+          "dropbox": true,
+          "details": "Certificate issued by the Prosecution Office for any criminal case initiated against the entity or its legal representative and certificate issued by the Judicial Register of the Ministry of Justice for the legal representative of the entity.",
+          "short_name": "CRIMINAL RECORD CER"
+        },
+        {
+          "name": "Certificate of no pending lawsuit",
+          "dropbox": true,
+          "details": "Certificate issued by the Court evidencing that the entity does not have a pending lawsuit/criminal case.",
+          "short_name": "NO PENDING LAWSUIT"
+        },
+        {
+          "name": "Certificate of good standing",
+          "dropbox": true,
+          "details": "For Albanian entities, a certificate issued by the Court evidencing that the entity is not in the process of liquidation or bankruptcy.",
+          "short_name": "GOOD STANDING"
+        },
+        {
+          "name": "Tax clearance",
+          "dropbox": true,
+          "details": "From national and local tax authorities.",
+          "short_name": "TAX CLEARANCE"
+        },
+        {
+          "name": "Copies of financial statements of 2023 and turnover certificates",
+          "dropbox": true
+        },
+        {
+          "name": "Contracts of outsourced staff",
+          "dropbox": true,
+          "details": "If part of the full-time staff, highlight their names in the payroll register.",
+          "short_name": "OUTSOURCED STAFF"
+        }
+      ]
+    },
+    "TEAMS": {
+      "REQ EXPERTS": [
+        {
+          "role": "Team Leader / Landscape Architect / Architect",
+          "required_license": "2 d",
+          "experience": "at least 10 years of general professional experience in similar project development.",
+          "education": "University degree in landscape architecture/architecture/urban design."
+        },
+        {
+          "role": "Urban Planer",
+          "required_license": "1 b",
+          "education": "University degree in urban planning/city planning/urban design."
+        },
+        {
+          "role": "Civil Construction Engineer",
+          "required_license": "3 a, b-2, c-1, c-2, d, e",
+          "education": "university degree in civil engineering for infrastructure/transportation planning."
+        },
+        {
+          "role": "Traffic Planner",
+          "required_license": "6 a, b, 11 a, d",
+          "education": "University degree in transportation planning/civil engineering for infrastructure/urban planning."
+        }
+      ],
+      "OPT EXPERTS": [
+        {
+          "role": "Environmental Expert",
+          "requirements": "License issued by the relevant authorities, to perform ESIA."
+        },
+        {
+          "role": "Cultural Heritage Expert",
+          "required_license": "P/A-2,6,7"
+        },
+        {
+          "role": "Bridge Construction Expert",
+          "required_license": "7 a, b, c, d"
+        },
+        {
+          "role": "Road Signage Expert",
+          "required_license": "11 a, b, d"
+        },
+        {
+          "role": "Geology Expert",
+          "required_license": "9 a, d, e"
+        },
+        {
+          "role": "Topography Expert",
+          "required_license": "8 a, b, c, d, e"
+        },
+        {
+          "role": "Electrical Engineer",
+          "required_license": "4 c, i, j, 11 d"
+        },
+        {
+          "role": "Hydro-Technical Engineer",
+          "required_license": "5 a, b, c, d"
+        },
+        {
+          "role": "Cost Estimation Engineer",
+          "required_license": "no required license"
+        }
+      ]
+    },
+    "EXP": {
+      "Team Leader": "at least 10 years of general professional experience in similar project development",
+      "Urban Planner": "at least 10 years of experience in similar projects",
+      "Civil Construction Engineer": "at least 10 years of experience in similar projects",
+      "Traffic Planner": "at least 10 years of experience in similar projects"
+    },
+    "ADDITIONALS": [
+      "WORK PLAN",
+      "CONFLICT OF INTEREST"
+    ],
+    "EVALUATION_CRITERIA": {
+      "description": "Criteria and weighting for evaluating bids.",
+      "criteria": [
+        {
+          "name": "Qualifications of core team experts (LA, UP, CCE, TP)",
+          "weight": "25%",
+          "documentation": "CVs, Diplomas, contracts, certifications, recommendations, licenses"
+        },
+        {
+          "name": "Prior Relevant experience of the company",
+          "weight": "30%",
+          "documentation": "contracts, references, pictures of implemented designs etc"
+        },
+        {
+          "name": "Experience in similar urban trails’ design (demonstrated for the company or for the experts)",
+          "weight": "10%",
+          "documentation": "Contracts, references."
+        },
+        {
+          "name": "Financial Bid",
+          "weight": "35%",
+          "documentation": "BoQ"
+        }
+      ],
+      "TOTAL_WEIGHT": "100%"
+    }
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "formTitle": "Procurement Application Submission",
+  "sections": [
+    {
+      "id": "applicationDocs",
+      "title": "Application Documents",
+      "icon": "document",
+      "fields": [
+        {
+          "id": "applicationForm",
+          "label": "Application Form",
+          "type": "file",
+          "accept": ".pdf,.doc,.docx",
+          "maxSizeMB": 10,
+          "required": true
+        },
+        {
+          "id": "proposedPrice",
+          "label": "Proposed Price",
+          "type": "number",
+          "placeholder": "Enter proposed price",
+          "currency": "€",
+          "min": 0,
+          "step": 0.01,
+          "required": true
+        },
+        {
+          "id": "payrolls",
+          "label": "Number of Payrolls",
+          "type": "number",
+          "placeholder": "Enter number of payrolls",
+          "min": 0,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "contracts",
+      "title": "Attached Contracts",
+      "icon": "document",
+      "fields": [
+        {
+          "id": "attachedContracts",
+          "label": "Attached Contracts",
+          "type": "multi-file",
+          "accept": ".pdf,.doc,.docx",
+          "maxSizeMB": 10,
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "businessInfo",
+      "title": "Business Information",
+      "icon": "business",
+      "fields": [
+        {
+          "id": "businessRegistrationNumber",
+          "label": "Business Registration Number",
+          "type": "text",
+          "placeholder": "Enter business registration number",
+          "required": true,
+          "triggersConditional": true 
+        }
+      ],
+      "conditionalFields": [
+        {
+          "id": "businessLicense",
+          "label": "Business License",
+          "type": "file",
+          "accept": ".pdf,.doc,.docx,.jpg,.jpeg,.png",
+          "required": true
+        },
+        {
+          "id": "noPendingLawsuitCert",
+          "label": "Certificate of No Pending Lawsuit",
+          "type": "file",
+          "accept": ".pdf,.doc,.docx,.jpg,.jpeg,.png",
+          "required": true
+        },
+        {
+          "id": "goodStandingCert",
+          "label": "Certificate of Good Standing",
+          "type": "file",
+          "accept": ".pdf,.doc,.docx,.jpg,.jpeg,.png",
+          "required": true
+        },
+        {
+          "id": "taxClearance",
+          "label": "Tax Clearance",
+          "type": "file",
+          "accept": ".pdf,.doc,.docx,.jpg,.jpeg,.png",
+          "required": true
+        },
+        {
+          "id": "financialStatements",
+          "label": "Financial Statements (Last Year)",
+          "type": "file",
+          "accept": ".pdf,.doc,.docx,.xls,.xlsx",
+          "required": true
+        },
+        {
+          "id": "outsourcedContracts",
+          "label": "Contracts of Outsourced Staff (Optional)",
+          "type": "multi-file",
+          "accept": ".pdf,.doc,.docx",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "staff",
+      "title": "Staff Members",
+      "icon": "users",
+      "type": "table",
+      "addLabel": "Add Staff Member",
+      "minRows": 1,
+      "columns": [
+        {"id": "fullName", "label": "Full Name", "type": "text", "placeholder": "Full Name", "required": true},
+        {"id": "profession", "label": "Profession", "type": "text", "placeholder": "Profession", "required": true},
+        {"id": "yearsExperience", "label": "Years of Experience", "type": "number", "placeholder": "Years", "min": 0, "required": true},
+        {"id": "cv", "label": "CV", "type": "file", "accept": ".pdf,.doc,.docx", "required": true},
+        {"id": "diplomas", "label": "Diplomas", "type": "file", "accept": ".pdf,.doc,.docx,.jpg,.jpeg,.png", "required": true},
+        {"id": "credentials", "label": "Credentials", "type": "file", "accept": ".pdf,.doc,.docx,.jpg,.jpeg,.png", "required": true}
+      ]
+    },
+    {
+      "id": "additionalDocs",
+      "title": "Additional Documents",
+      "icon": "document",
+      "fields": [
+        {
+          "id": "workplan",
+          "label": "Work Plan",
+          "type": "file",
+          "accept": ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
+          "required": true
+        },
+        {
+          "id": "conflictDisclosure",
+          "label": "Disclosure of Conflict of Interest (Optional)",
+          "type": "file",
+          "accept": ".pdf,.doc,.docx",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "submitLabel": "Submit Application"
+}
