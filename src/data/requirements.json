@@ -1,4 +1,9 @@
 {
+  "metadata": {
+    "id": "procurement-2025",
+    "title": "Procurement Application Submission",
+    "description": "Submit your procurement application for the AADF project."
+  },
   "price": {
     "weight": 0.35,
     "ceiling": 300000,

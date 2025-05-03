@@ -2,63 +2,64 @@
 
 import React, { useState, useEffect, useRef, ChangeEvent, FormEvent, RefObject } from 'react';
 import { formConfig } from '../../data/formConfig'; 
-import { Field, Column, Section, StaffMember, FormData } from '../../types/procurementForm'; 
+import { Field, Column, Section, StaffMember, FormData as PageFormData, SubmissionData } from '../../types/procurementForm'; 
+import { submitProcurementApplication } from './actions'; 
+import requirementsData from '../../data/requirements.json'; 
+import { createClient } from '@/utils/supabase/client'; 
+import { v4 as uuidv4 } from 'uuid'; 
+
+const procurementId = requirementsData.metadata.id; 
+const BUCKET_NAME = procurementId; 
 
 const ProcurementForm: React.FC = () => {
-  // --- State Initialization (Dynamic) ---
-  const [formData, setFormData] = useState<FormData>({});
+  const [formData, setFormData] = useState<PageFormData>({});
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const fileInputRefs = useRef<Record<string, RefObject<HTMLInputElement | null>>>({});
   const staffFileInputRefs = useRef<Record<number, Record<string, RefObject<HTMLInputElement | null>>>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Initialize State and Refs
   useEffect(() => {
-    const initialFormData: FormData = {};
+    const initialFormData: PageFormData = {};
     const initialStaffMembers: StaffMember[] = [];
 
     formConfig.sections.forEach((section: Section) => {
       if (section.type === 'table') {
-        // Add explicit type for accumulator 'acc' and ensure initial value is typed
         const staffColumns = section.columns?.reduce((acc: { [key: string]: string | number | File | FileList | null }, col: Column) => {
-          // Use if/else if/else for clearer type handling
           if (col.type === 'number') {
             acc[col.id] = 0;
-          } else if (col.type === 'file') { // ColumnType cannot be 'multi-file'
-            acc[col.id] = null;
-          } else { // Default to text or other types
+          } else if (col.type === 'file') { 
+            acc[col.id] = null; 
+          } else { 
             acc[col.id] = '';
           } 
           return acc;
-        }, {} as { [key: string]: string | number | File | FileList | null }); // Ensure initial value type matches accumulator
-        // Initialize staff members based on minRows
+        }, {} as { [key: string]: string | number | File | FileList | null }); 
         for (let i = 0; i < (section.minRows || 1); i++) {
-          initialStaffMembers.push({ id: i + 1, staffIndex: i, ...staffColumns });
+          initialStaffMembers.push({ id: Date.now() + i, staffIndex: i, ...staffColumns });
         }
       } else {
         section.fields?.forEach((field: Field) => {
-          // Ensure correct type handling for initialization
           if (field.type === 'number') {
             initialFormData[field.id] = 0;
-          } else if (field.type === 'file' || field.type === 'multi-file') { // Group file types
-            initialFormData[field.id] = null;
-          } else { // Handle text and other types
+          } else if (field.type === 'file' || field.type === 'multi-file') { 
+            initialFormData[field.id] = null; 
+          } else { 
             initialFormData[field.id] = '';
           }
         });
         section.conditionalFields?.forEach((field: Field) => {
-           // Ensure correct type handling for initialization
           if (field.type === 'number') {
             initialFormData[field.id] = 0;
-          } else if (field.type === 'file' || field.type === 'multi-file') { // Group file types
+          } else if (field.type === 'file' || field.type === 'multi-file') { 
             initialFormData[field.id] = null;
-          } else { // Handle text and other types
+          } else { 
             initialFormData[field.id] = '';
           }
         });
       }
     });
 
-    // Initialize file refs
     formConfig.sections.forEach((section: Section) => {
       section.fields?.forEach((field: Field) => {
         if (field.type === 'file' || field.type === 'multi-file') {
@@ -67,17 +68,16 @@ const ProcurementForm: React.FC = () => {
         }
       });
       if (section.columns) {
-        // Initialize staff refs (assuming one initial staff member for ref setup)
-        if (initialStaffMembers.length > 0) {
-          section.columns.forEach((col: Column) => { 
-            if (col.type === 'file') { // ColumnType cannot be 'multi-file'
-              if (!staffFileInputRefs.current[0]) {
-                staffFileInputRefs.current[0] = {};
+        initialStaffMembers.forEach((_staff, index) => {
+          section.columns?.forEach((col: Column) => { 
+            if (col.type === 'file') { 
+              if (!staffFileInputRefs.current[index]) {
+                staffFileInputRefs.current[index] = {};
               }
-              staffFileInputRefs.current[0][col.id] = React.createRef<HTMLInputElement | null>();
+              staffFileInputRefs.current[index][col.id] = React.createRef<HTMLInputElement | null>();
             }
           });
-        }
+        });
       }
     });
 
@@ -85,41 +85,40 @@ const ProcurementForm: React.FC = () => {
     setStaffMembers(initialStaffMembers);
   }, []);
 
-  // --- Event Handlers (Adjusted for Dynamic State) ---
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-
-    setFormData((prev: FormData) => ({ 
+    setFormData((prev: PageFormData) => ({ 
       ...prev,
       [name]: type === 'number' ? parseFloat(value) || 0 : value,
     }));
   };
 
-  const handleStaffChange = (index: number, e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, files } = e.target;
+  const handleStaffChange = (staffIndex: number,
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
+    const staffId = name; // For staff, name attribute holds the field id
 
-    setStaffMembers((prev: StaffMember[]) => { 
-      const updatedStaff = [...prev];
-      if (type === 'file' && files) {
-        updatedStaff[index] = {
-          ...updatedStaff[index],
-          [name]: files.length === 1 ? files[0] : files, 
-        };
-      } else {
-        updatedStaff[index] = {
-          ...updatedStaff[index],
-          [name]: type === 'number' ? parseFloat(value) || 0 : value,
-        };
+    setStaffMembers((prev: StaffMember[]) => {
+      const newState = [...prev];
+      const staffMember = newState[staffIndex]; // Corrected: use staffIndex
+
+      if (staffMember) {
+        // Check if the target is an input element and type is file
+        if (e.target instanceof HTMLInputElement && type === 'file') {
+            const files = e.target.files;
+            if (files) {
+                staffMember[staffId] = files; // Assign FileList
+            }
+        } else if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
+            staffMember[staffId] = e.target.checked;
+        } else {
+            // Handle other input types (text, number, textarea, select)
+            staffMember[staffId] = value;
+        }
       }
-      return updatedStaff;
+      return newState;
     });
-  };
-
-  const triggerFileInput = (refKey: string) => {
-    const ref = fileInputRefs.current[refKey];
-    if (ref?.current) { 
-      ref.current.click();
-    }
   };
 
   const handleAddStaffMember = () => {
@@ -127,186 +126,258 @@ const ProcurementForm: React.FC = () => {
     const newStaffMember: StaffMember = { id: Date.now(), staffIndex: newStaffIndex }; 
     const staffSection = formConfig.sections.find((sec: Section) => sec.id === 'staffMembers');
     staffSection?.columns?.forEach((col: Column) => {
-      // Ensure correct type handling for initialization
       if (col.type === 'number') {
         newStaffMember[col.id] = 0;
-      } else if (col.type === 'file') { // ColumnType cannot be 'multi-file'
+      } else if (col.type === 'file') { 
         newStaffMember[col.id] = null;
-      } else if (col.type === 'text') { // Explicitly handle text
-        newStaffMember[col.id] = '';
-      } else { // Handle any other types (future-proofing)
-        newStaffMember[col.id] = ''; // Default to empty string
-      }
-      // Ensure refs are created for the new row, grouping file types
-      if (col.type === 'file') { // ColumnType cannot be 'multi-file'
-        const newIndex = staffMembers.length; // Use length before adding
-        if (!staffFileInputRefs.current[newIndex]) {
-          staffFileInputRefs.current[newIndex] = {};
+        if (!staffFileInputRefs.current[newStaffIndex]) {
+          staffFileInputRefs.current[newStaffIndex] = {};
         }
-        staffFileInputRefs.current[newIndex][col.id] = React.createRef<HTMLInputElement | null>();
-      }
+        staffFileInputRefs.current[newStaffIndex][col.id] = React.createRef<HTMLInputElement | null>();
+      } else { 
+        newStaffMember[col.id] = '';
+      } 
     });
     setStaffMembers(prev => [...prev, newStaffMember]);
   };
 
-  const handleRemoveStaffMember = (index: number) => {
-    setStaffMembers(prev => prev.filter((_, i) => i !== index));
-    // Optionally remove refs for the deleted row, though less critical
-    delete staffFileInputRefs.current[index];
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    // TODO: Add validation logic based on 'required' flags in JSON
-    console.log('Form Data:', formData);
-    console.log('Staff Members:', staffMembers);
-    alert('Form submitted! Check console for data.');
-  };
-
-  // --- Dynamic Rendering --- 
-  const renderField = (field: Field, targetObject: FormData | StaffMember, changeHandler: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void, index?: number) => {
-    const key = index !== undefined ? `${field.id}-${index}` : field.id;
-    let rawValue: string | number | boolean | File | FileList | null = null; // Store the raw value
-
-    if (targetObject && typeof (targetObject as StaffMember)?.staffIndex === 'number') {
-      rawValue = (targetObject as StaffMember)[field.id];
-    } else {
-      rawValue = (targetObject as FormData)[field.id];
+  const handleRemoveStaffMember = (indexToRemove: number) => {
+    setStaffMembers(prev => prev.filter((staff) => staff.staffIndex !== indexToRemove)
+                              .map((staff, newIndex) => ({ ...staff, staffIndex: newIndex }))); 
+    delete staffFileInputRefs.current[indexToRemove];
+    const maxIndex = staffMembers.length - 2;
+    for (let i = indexToRemove; i <= maxIndex; i++) {
+      if (staffFileInputRefs.current[i+1]) {
+        staffFileInputRefs.current[i] = staffFileInputRefs.current[i+1];
+      }
     }
+    delete staffFileInputRefs.current[maxIndex + 1];
+  };
 
-    // Handle null for non-file inputs, default to empty string
-    const value = (field.type !== 'file' && field.type !== 'multi-file' && rawValue === null) ? '' : rawValue;
+  const uploadFile = async (file: File, filePath: string): Promise<string | null> => {
+    const supabase = createClient(); 
+    try {
+      setSubmissionStatus({ message: `Uploading ${file.name}...`, type: 'info' });
+      console.log(`Attempting to upload: ${filePath}`);
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false 
+        });
+
+      if (error) {
+        console.error(`Supabase upload error for ${filePath}:`, error);
+        if (error.message.includes('Duplicate')) { 
+          console.warn(`File ${filePath} already exists. Retrieving public URL.`);
+          const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+          return urlData?.publicUrl || null;
+        }
+        throw new Error(`Upload failed for ${file.name}: ${error.message}`);
+      }
+
+      const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(data.path);
+      console.log(`Successfully uploaded ${filePath}, URL: ${urlData?.publicUrl}`);
+      setSubmissionStatus({ message: `Uploaded ${file.name}`, type: 'success' });
+      return urlData?.publicUrl || null;
+    } catch (err) {
+      console.error('Upload file function error:', err);
+      setSubmissionStatus({ message: `Failed to upload ${file.name}. ${err instanceof Error ? err.message : ''}`, type: 'error' });
+      return null; 
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmissionStatus({ message: 'Starting submission...', type: 'info' });
+
+    const submissionId = uuidv4(); 
+    console.log(`Starting submission process for Procurement ID: ${procurementId}, Submission ID: ${submissionId}`);
+
+    const processedData: SubmissionData = JSON.parse(JSON.stringify(formData)); 
+    processedData.staffMembers = JSON.parse(JSON.stringify(staffMembers));
+    processedData.procurementId = procurementId; 
+    processedData.submissionId = submissionId; 
+
+    const uploadPromises: Promise<void>[] = [];
+
+    try {
+      formConfig.sections.forEach(section => {
+        if (section.type !== 'table') {
+          const processField = async (field: Field) => {
+            if (field.type === 'file' || field.type === 'multi-file') {
+              const fileInput = fileInputRefs.current[field.id]?.current;
+              if (fileInput?.files && fileInput.files.length > 0) {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                  const file = fileInput.files[i];
+                  if (file.size > 0) {
+                    const filePath = `procurements/${procurementId}/${submissionId}/${field.id}_${file.name}`;
+                    uploadPromises.push(
+                      uploadFile(file, filePath).then(url => {
+                        if (url) {
+                          processedData[field.id] = url; 
+                        } else {
+                          throw new Error(`Upload failed for field ${field.id}, file ${file.name}`);
+                        }
+                      })
+                    );
+                  }
+                }
+              } else {
+                processedData[field.id] = null;
+              }
+            }
+          };
+          section.fields?.forEach(processField);
+          section.conditionalFields?.forEach(processField);
+        }
+      });
+
+      staffMembers.forEach((staff, index) => {
+        const staffSection = formConfig.sections.find(sec => sec.id === 'staffMembers');
+        staffSection?.columns?.forEach(col => {
+          if (col.type === 'file') {
+            const file = staff[col.id] as File | null; 
+            if (file instanceof File && file.size > 0) {
+              const filePath = `procurements/${procurementId}/${submissionId}/staff-${index}-${col.id}_${file.name}`;
+              uploadPromises.push(
+                uploadFile(file, filePath).then(url => {
+                  if (url) {
+                    if (processedData.staffMembers && processedData.staffMembers[index]) {
+                      processedData.staffMembers[index][col.id] = url;
+                    }
+                  } else {
+                    throw new Error(`Upload failed for staff ${index}, field ${col.id}, file ${file.name}`);
+                  }
+                })
+              );
+            } else {
+              if (processedData.staffMembers && processedData.staffMembers[index]) {
+                processedData.staffMembers[index][col.id] = null;
+              }
+            }
+          }
+        });
+      });
+
+      setSubmissionStatus({ message: `Uploading ${uploadPromises.length} files...`, type: 'info' });
+      await Promise.all(uploadPromises);
+      console.log('All file uploads completed.');
+      setSubmissionStatus({ message: 'All files uploaded. Saving data...', type: 'info' });
+
+      const finalPayload: SubmissionData = JSON.parse(JSON.stringify(processedData));
+
+      console.log('Final Payload to Server Action:', finalPayload);
+
+      const result = await submitProcurementApplication(finalPayload); 
+
+      console.log('Server Action Result:', result);
+      if (result.success) {
+        setSubmissionStatus({ message: 'Submission successful!', type: 'success' });
+      } else {
+        setSubmissionStatus({ message: `Submission failed: ${result.error}`, type: 'error' });
+      }
+
+    } catch (error) {
+      console.error('Submission Handler Error:', error);
+      setSubmissionStatus({ 
+        message: `Submission failed: ${error instanceof Error ? error.message : 'An unknown error occurred.'}`,
+        type: 'error' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const renderField = (field: Field, index?: number, staffIndex?: number) => {
+    const key = staffIndex !== undefined ? `staff-${staffIndex}-${field.id}` : field.id;
+    const value = staffIndex !== undefined ? staffMembers[staffIndex]?.[field.id] : formData[field.id];
+    const inputRef = staffIndex !== undefined ? staffFileInputRefs.current[staffIndex]?.[field.id] : fileInputRefs.current[field.id];
+    const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => { 
+        if (staffIndex !== undefined) {
+            handleStaffChange(staffIndex, e);
+        } else {
+            handleInputChange(e);
+        }
+    };
 
     switch (field.type) {
       case 'text':
+      case 'email':
+      case 'number':
         return (
-          <div> 
-            <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
+          <div key={key} className="mb-4">
+            <label htmlFor={key} className="block text-sm font-medium text-gray-700">{field.label}{field.required ? ' *' : ''}</label>
             <input
-              type="text"
+              type={field.type}
               id={key}
-              name={field.id}
-              className="form-input"
-              placeholder={field.placeholder}
-              value={(value ?? '') as string} // Ensure defined value
-              onChange={changeHandler}
+              name={field.id} 
+              value={String(value ?? '')} 
+              onChange={handleChange}
               required={field.required}
+              placeholder={field.placeholder}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              disabled={isSubmitting}
             />
           </div>
         );
       case 'textarea':
         return (
-          <div> 
-            <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
+          <div key={key} className="mb-4">
+            <label htmlFor={key} className="block text-sm font-medium text-gray-700">{field.label}{field.required ? ' *' : ''}</label>
             <textarea
               id={key}
-              name={field.id}
-              onChange={changeHandler}
-              className="form-textarea"
-              placeholder={field.placeholder}
+              name={field.id} 
+              value={String(value ?? '')} 
+              onChange={handleChange}
               required={field.required}
+              placeholder={field.placeholder}
               rows={field.rows || 3}
-              value={(value ?? '') as string} // Ensure defined value
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              disabled={isSubmitting}
             />
-          </div>
-        );
-      case 'number':
-        return (
-          <div> 
-            <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                id={key}
-                name={field.id}
-                className={`form-input ${field.currency ? 'pr-6' : ''}`}
-                placeholder={field.placeholder}
-                // Use value ?? '' or value ?? 0, ensuring it's never undefined/null
-                // Using '' might be safer if backend expects string or number
-                value={(value ?? '') as string | number} 
-                onChange={changeHandler}
-                required={field.required}
-                min={field.min}
-                step={field.step}
-              />
-              {field.currency && (
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500">{field.currency}</span>
-                </div>
-              )}
-            </div>
           </div>
         );
       case 'select':
         return (
-          <div> 
-            <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
+          <div key={key} className="mb-4">
+            <label htmlFor={key} className="block text-sm font-medium text-gray-700">{field.label}{field.required ? ' *' : ''}</label>
             <select
-              name={field.id}
               id={key}
-              value={(value ?? '') as string} // Ensure defined value
-              onChange={changeHandler}
+              name={field.id} 
+              value={String(value ?? '')} 
+              onChange={handleChange}
               required={field.required}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              disabled={isSubmitting}
             >
-              <option value="">{field.placeholder || 'Select an option'}</option>
-              {field.options?.map((option: { value: string; label: string }) => (
+              <option value="">{field.placeholder || 'Select...'}</option>
+              {field.options?.map(option => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </div>
         );
       case 'file':
-      case 'multi-file':
-        // Determine display name using rawValue
-        let displayFileName = 'Upload File(s)';
-        // Client-side only checks for File/FileList
-        if (typeof window !== 'undefined') {
-          if (rawValue instanceof File) {
-            displayFileName = rawValue.name;
-          } else if (rawValue instanceof FileList) {
-            displayFileName = `${rawValue.length} file${rawValue.length > 1 ? 's' : ''} selected`;
-          } else if (typeof rawValue === 'string' && rawValue) { // Handle potential initial string values if needed
-            displayFileName = rawValue;
-          }
-        }
-
+      case 'multi-file': 
         return (
-          <div className="flex flex-col"> 
-            <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <div
-              className="form-file-upload cursor-pointer border border-gray-300 rounded-md p-4 text-center hover:bg-gray-50"
-              onClick={() => triggerFileInput(field.id)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto mb-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <p className="text-xs text-gray-500 truncate">{displayFileName}</p>
-              {field.accept && <p className="text-xs text-gray-400 mt-1">Accepts: {field.accept}</p>}
-              {field.maxSizeMB && <p className="text-xs text-gray-400 mt-1">Max size: {field.maxSizeMB}MB</p>}
-            </div>
+          <div key={key} className="mb-4">
+            <label htmlFor={key} className="block text-sm font-medium text-gray-700">{field.label}{field.required ? ' *' : ''}</label>
             <input
               type="file"
               id={key}
-              name={field.id}
-              ref={fileInputRefs.current[field.id]}
-              className="hidden" // Keep hidden, triggered by the div
-              onChange={changeHandler}
+              name={field.id} 
+              ref={inputRef as RefObject<HTMLInputElement>} 
+              onChange={handleChange}
               required={field.required}
-              multiple={field.type === 'multi-file'}
-              accept={field.accept}
-              // DO NOT set 'value' for file inputs - make them uncontrolled
+              multiple={field.type === 'multi-file'} 
+              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              disabled={isSubmitting}
             />
+            {/* Check if value is a File-like object before accessing name */}
+            {typeof value === 'object' && value !== null && 'name' in value && typeof value.name === 'string' && (              <p className="text-xs text-gray-500 mt-1">Selected: {value.name}</p>
+            )}
           </div>
         );
       default:
@@ -314,104 +385,88 @@ const ProcurementForm: React.FC = () => {
     }
   };
 
-  const renderSection = (section: Section) => {
-    const gridClass = section.gridCols || 'md:grid-cols-2'; 
+  return (
+    <div className="max-w-4xl mx-auto p-8 bg-white shadow-lg rounded-lg mt-10">
+      <h1 className="text-2xl font-semibold mb-6 text-gray-800">Procurement Application - {procurementId}</h1>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {formConfig.sections.map((section: Section) => (
+          <div key={section.id}>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{section.title}</h2>
+            {section.description && <p className="text-sm text-gray-600 mb-4">{section.description}</p>}
+            
+            {section.type !== 'table' && section.fields?.map(field => renderField(field))}
+            
+            {section.conditionalFields?.map(field => {
+              const conditionMet = field.condition ? formData[field.condition.fieldId] === field.condition.value : true;
+              return conditionMet ? renderField(field) : null;
+            })}
 
-    if (section.type === 'table') {
-      return (
-        <div key={section.id} className="mb-8 p-6 bg-white rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">{section.title}</h2>
-          <div className="overflow-x-auto">
-            <table className="staff-table">
-              <thead>
-                <tr>
-                  {section.columns?.map((column: Column) => (
-                    <th key={column.id}>{column.label}</th>
-                  ))}
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffMembers.map((staffMember, index) => (
-                  <tr key={staffMember.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    {section.columns?.map((column: Column) => (
-                      <td key={`${staffMember.id}-${column.id}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {/* Pass staffMember.staffIndex for unique key generation in renderField if needed */}
-                        {renderField(column as unknown as Field, staffMember, (e) => handleStaffChange(index, e as ChangeEvent<HTMLInputElement>), index)}
-                      </td>
+            {section.type === 'table' && section.id === 'staffMembers' && (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {section.columns?.map(col => (
+                        <th key={col.id} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{col.label}{col.required ? ' *' : ''}</th>
+                      ))}
+                      <th scope="col" className="relative px-6 py-3">
+                        <span className="sr-only">Remove</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {staffMembers.map((staff, index) => (
+                      <tr key={staff.id}>
+                        {section.columns?.map(col => (
+                          <td key={col.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {renderField(col as Field, index, staff.staffIndex)}
+                          </td>
+                        ))}
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {staffMembers.length > (section.minRows || 1) && (
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoveStaffMember(staff.staffIndex)} 
+                              className="text-red-600 hover:text-red-900"
+                              disabled={isSubmitting}
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </td>
+                      </tr>
                     ))}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button
-                        type="button"
-                        className={`p-1 text-red-500 ${staffMembers.length <= (section.minRows || 1) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        onClick={() => handleRemoveStaffMember(index)}
-                        disabled={staffMembers.length <= (section.minRows || 1)}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
+                <button 
+                  type="button" 
+                  onClick={handleAddStaffMember} 
+                  className="mt-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  disabled={isSubmitting}
+                >
+                  Add Staff Member
+                </button>
+              </div>
+            )}
           </div>
-          <div className="mt-4">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={handleAddStaffMember}
-            >
-              {section.addLabel || 'Add Row'}
-            </button>
-          </div>
-        </div>
-      );
-    }
+        ))}
 
-    // Standard rendering for other sections
-    return (
-      <div key={section.id} className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-700">{section.title}</h2>
-        <div className={`grid grid-cols-1 gap-6 ${gridClass}`}>
-          {section.fields?.map((field: Field) => (
-            <React.Fragment key={field.id}> {/* Add unique key here */}
-              {renderField(field, formData, handleInputChange)}
-            </React.Fragment>
-          ))}
-        </div>
-        {/* Render conditional fields if trigger is met */}
-        {section.conditionalFields && (
-          <div className={`mt-6 grid grid-cols-1 gap-6 ${gridClass}`}> {/* Add margin-top */} 
-            {section.conditionalFields.map((field: Field) => (
-              <React.Fragment key={field.id}> {/* Add unique key here */}
-                {renderField(field, formData, handleInputChange)}
-              </React.Fragment>
-            ))}
+        {submissionStatus && (
+          <div className={`p-4 rounded-md ${submissionStatus.type === 'success' ? 'bg-green-100 text-green-700' : submissionStatus.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+            {submissionStatus.message}
           </div>
         )}
-      </div>
-    );
-  };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-10">{formConfig.formTitle}</h1>
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {formConfig.sections.map((section: Section) => renderSection(section))} 
-
-          <div className="flex justify-end pt-8">
-            <button
-              type="submit"
-              className="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out"
-            >
-              {formConfig.submitLabel}
-            </button>
-          </div>
-        </form>
-      </div>
+        <div className="flex justify-end mt-8">
+          <button 
+            type="submit" 
+            className={`px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${isSubmitting ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50`}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Application'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
