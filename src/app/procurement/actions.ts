@@ -45,7 +45,7 @@ export async function submitProcurementApplication(
   try {
     // Define a type for team member attributes
     type TeamMemberAttributes = {
-      [attribute: string]: string | number | boolean | SubmissionStaffMember[] | null | undefined;
+      [attribute: string]: string | number | boolean | string[] | SubmissionStaffMember[] | null | undefined;
     };
     
     // Dynamically build the nested team members structure
