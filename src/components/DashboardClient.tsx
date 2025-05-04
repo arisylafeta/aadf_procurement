@@ -292,8 +292,12 @@ export function DashboardClient() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   // State for fetched tenders (transformed from submissions)
   const [tenders, setTenders] = useState<TenderWithDetails[]>([]);
+  const [pendingSubmissions, setPendingSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingPending, setIsLoadingPending] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingError, setPendingError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<Record<string, boolean>>({});
 
   // Fetch data on mount
   useEffect(() => {
@@ -306,7 +310,7 @@ export function DashboardClient() {
           throw new Error(`Failed to fetch submissions: ${response.statusText}`);
         }
         const submissionsData = await response.json();
-        console.log('Fetched submissions:', submissionsData);
+        console.log('Fetched completed submissions:', submissionsData);
 
         // Transform submissions into Tenders
         const transformedTenders = submissionsData.map((sub: Submission) => {
@@ -374,7 +378,63 @@ export function DashboardClient() {
     };
 
     fetchCompletedSubmissions();
+    
+    // Fetch pending submissions
+    const fetchPendingSubmissions = async () => {
+      setIsLoadingPending(true);
+      setPendingError(null);
+      try {
+        const response = await fetch('/api/submissions?status=pending');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch pending submissions: ${response.statusText}`);
+        }
+        const pendingData = await response.json();
+        console.log('Fetched pending submissions:', pendingData);
+        setPendingSubmissions(pendingData);
+      } catch (err) {
+        console.error("Error fetching pending submissions:", err);
+        setPendingError(err instanceof Error ? err.message : 'An unknown error occurred');
+      } finally {
+        setIsLoadingPending(false);
+      }
+    };
+    
+    fetchPendingSubmissions();
   }, []); // Empty dependency array means this runs once on mount
+  
+  // Function to handle generating rating for a submission
+  const handleGenerateRating = async (submissionId: string) => {
+    setIsGenerating(prev => ({ ...prev, [submissionId]: true }));
+    try {
+      const response = await fetch(`/api/rate-submission`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate rating: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('Generation result:', result);
+      
+      // Refresh the pending submissions list
+      const updatedResponse = await fetch('/api/submissions?status=pending');
+      if (updatedResponse.ok) {
+        const updatedData = await updatedResponse.json();
+        setPendingSubmissions(updatedData);
+      }
+      
+    } catch (err) {
+      console.error("Error generating rating:", err);
+      alert(`Error generating rating: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsGenerating(prev => ({ ...prev, [submissionId]: false }));
+    }
+  };
 
   // Recalculate stats based on the fetched 'tenders' state
   const tenderStats = useMemo(() => {
@@ -420,7 +480,52 @@ export function DashboardClient() {
 
   return (
     <div className="container mx-auto p-4">
-      {/* Combined View with Search and Tender Cards */} 
+      {/* Pending Submissions Section */}
+      <div className="mb-10">
+        <h1 className="text-2xl font-bold mb-4">Pending Submissions</h1>
+        
+        {isLoadingPending ? (
+          <div className="text-center py-4">Loading pending submissions...</div>
+        ) : pendingError ? (
+          <div className="text-center py-4 text-red-600">Error loading pending submissions: {pendingError}</div>
+        ) : pendingSubmissions.length === 0 ? (
+          <div className="text-center py-4 text-gray-500">No pending submissions found.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {pendingSubmissions.map((submission) => (
+              <div key={submission.submission_id} className="border rounded-lg shadow-md bg-white dark:bg-gray-800 overflow-hidden">
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white truncate">
+                        {submission.company_name || `Company ${submission.submission_id.substring(0, 6)}`}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                        {submission.procurement_title || 'Unknown Procurement'}
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 rounded-full">
+                      Pending
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
+                    Submission ID: {submission.submission_id}
+                  </p>
+                  <button
+                    onClick={() => handleGenerateRating(submission.submission_id)}
+                    disabled={isGenerating[submission.submission_id]}
+                    className={`w-full py-2 px-4 text-white rounded-md transition-colors ${isGenerating[submission.submission_id] ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  >
+                    {isGenerating[submission.submission_id] ? 'Generating...' : 'Generate'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Completed Submissions Section */}
       <div>
           <h1 className="text-2xl font-bold mb-4">Ranked Submissions</h1>
           <input

@@ -69,8 +69,8 @@ export interface StaffMember {
   [key: string]: string | number | boolean | File | FileList | null; 
 }
 
-export interface FormData { // Used for component state
-  [key: string]: string | number | boolean | File | FileList | string[] | StaffMember[] | null;
+export interface FormData {
+  [key: string]: string | number | boolean | File | FileList | null; 
 }
 
 export interface SubmissionStaffMember { 
@@ -83,5 +83,5 @@ export interface SubmissionData {
     procurementId: string;
     submissionId: string;
     staffMembers?: SubmissionStaffMember[]; 
-    [key: string]: string | number | boolean | string[] | SubmissionStaffMember[] | null | undefined; 
+    [key: string]: string | number | boolean | SubmissionStaffMember[] | null | undefined; 
 }

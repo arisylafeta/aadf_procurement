@@ -16,7 +16,7 @@ const ProcurementForm: React.FC = () => {
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const fileInputRefs = useRef<Record<string, RefObject<HTMLInputElement | null>>>({});
   const staffFileInputRefs = useRef<Record<number, Record<string, RefObject<HTMLInputElement | null>>>>({});
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   useEffect(() => {
@@ -154,16 +154,6 @@ const ProcurementForm: React.FC = () => {
     delete staffFileInputRefs.current[maxIndex + 1];
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, fieldId: string, fieldType: string) => {
-    const { name, files } = e.target;
-    if (files) {
-      setFormData((prev: PageFormData) => ({
-        ...prev,
-        [name]: fieldType === 'multi-file' ? files : files[0], // Store FileList for multi-file, single File otherwise
-      }));
-    }
-  };
-
   const uploadFile = async (file: File, filePath: string): Promise<string | null> => {
     const supabase = createClient(); 
     try {
@@ -219,37 +209,19 @@ const ProcurementForm: React.FC = () => {
             if (field.type === 'file' || field.type === 'multi-file') {
               const fileInput = fileInputRefs.current[field.id]?.current;
               if (fileInput?.files && fileInput.files.length > 0) {
-                if (field.type === 'multi-file') {
-                  const fileList = fileInput.files;
-                  const fileUrls: string[] = [];
-                  console.log(`Processing multi-file input for field ${field.id}. Files count: ${fileList.length}`);
-                  for (let i = 0; i < fileList.length; i++) {
-                    const file = fileList[i];
+                for (let i = 0; i < fileInput.files.length; i++) {
+                  const file = fileInput.files[i];
+                  if (file.size > 0) {
                     const filePath = `procurements/${procurementId}/${submissionId}/${field.id}_${file.name}`;
-                    console.log(`Uploading file ${i + 1}/${fileList.length}: ${file.name}`);
-                    const publicUrl = await uploadFile(file, filePath);
-                    if (publicUrl) {
-                      fileUrls.push(publicUrl);
-                    } else {
-                      console.error(`Failed to upload file ${file.name} for field ${field.id}`);
-                      setSubmissionStatus({ message: `Error uploading ${file.name}. Submission failed.`, type: 'error' });
-                      setIsSubmitting(false);
-                      return; // Stop submission
-                    }
-                  }
-                  processedData[field.id] = fileUrls; // Replace FileList with array of URLs
-                } else { // Handle single file upload
-                  const file = fileInput.files[0];
-                  const filePath = `procurements/${procurementId}/${submissionId}/${field.id}_${file.name}`;
-                  console.log(`Processing single file for field ${field.id}: ${file.name}`);
-                  const publicUrl = await uploadFile(file, filePath);
-                  if (publicUrl) {
-                    processedData[field.id] = publicUrl; // Replace File with URL
-                  } else {
-                    console.error(`Failed to upload file for field ${field.id}`);
-                    setSubmissionStatus({ message: `Error uploading ${file.name}. Submission failed.`, type: 'error' });
-                    setIsSubmitting(false);
-                    return; // Stop submission
+                    uploadPromises.push(
+                      uploadFile(file, filePath).then(url => {
+                        if (url) {
+                          processedData[field.id] = url; 
+                        } else {
+                          throw new Error(`Upload failed for field ${field.id}, file ${file.name}`);
+                        }
+                      })
+                    );
                   }
                 }
               } else {
@@ -390,20 +362,22 @@ const ProcurementForm: React.FC = () => {
       case 'file':
       case 'multi-file': 
         return (
-          <div key={key} className="mb-6 p-4 border border-gray-200 rounded-lg shadow-sm bg-white">
-            <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1">{field.label} {field.required && <span className="text-red-500">*</span>}</label>
+          <div key={key} className="mb-4">
+            <label htmlFor={key} className="block text-sm font-medium text-gray-700">{field.label}{field.required ? ' *' : ''}</label>
             <input
               type="file"
               id={key}
               name={field.id} 
-              onChange={(e) => handleFileChange(e, field.id, field.type)} // Pass field type
-              accept={field.accept || '.pdf,.doc,.docx,.zip,.jpg,.png'}
-              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" // Enhanced styling
               ref={inputRef as RefObject<HTMLInputElement>} 
-              multiple={field.type === 'multi-file'} // Add multiple attribute conditionally
+              onChange={handleChange}
               required={field.required}
+              multiple={field.type === 'multi-file'} 
+              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              disabled={isSubmitting}
             />
-            {field.maxSizeMB && <p className="text-xs text-gray-500 mt-1">Max file size: {field.maxSizeMB}MB. Accepted formats: {field.accept || 'various'}</p>}
+            {/* Check if value is a File-like object before accessing name */}
+            {typeof value === 'object' && value !== null && 'name' in value && typeof value.name === 'string' && (              <p className="text-xs text-gray-500 mt-1">Selected: {value.name}</p>
+            )}
           </div>
         );
       default:
