@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --primary: oklch(0.205 0 0);
+  --primary: #000080; /* Changed to navy blue */
   --secondary: oklch(0.97 0 0);
   --accent: oklch(0.97 0 0);
   --tertiary: #9C1957;
