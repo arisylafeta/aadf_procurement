@@ -2,7 +2,7 @@
 
 import { StorageError } from '@supabase/storage-js';
 import { createClient } from '@/utils/supabase/server';
-import { SubmissionData } from '@/types/procurementForm'; 
+import { SubmissionData, SubmissionStaffMember } from '@/types/procurementForm'; 
 import { PostgrestError } from '@supabase/supabase-js'; 
 
 // const BUCKET_NAME = 'procurement-submissions'; 
@@ -43,6 +43,26 @@ export async function submitProcurementApplication(
   console.log('Received Submission Data:', JSON.stringify(submissionData, null, 2));
 
   try {
+    // Define a type for team member attributes
+    type TeamMemberAttributes = {
+      [attribute: string]: string | number | boolean | SubmissionStaffMember[] | null | undefined;
+    };
+    
+    // Dynamically build the nested team members structure
+    const nestedMembers: { [role: string]: TeamMemberAttributes } = {};
+    for (const key in submissionData) {
+      if (key.startsWith('team_members.')) {
+        const parts = key.split('.');
+        if (parts.length === 3) {
+          const [, role, attribute] = parts;
+          if (!nestedMembers[role]) {
+            nestedMembers[role] = {};
+          }
+          nestedMembers[role][attribute] = submissionData[key];
+        }
+      }
+    }
+
     // Group data into JSONB structures matching the new table schema
     const core_data = {
       business_registration_number: submissionData.businessRegistrationNumber,
@@ -60,17 +80,13 @@ export async function submitProcurementApplication(
       // Add any other relevant 'experience' fields here
     };
 
+    // Construct the team_data JSONB object with the nested structure
     const team_data = {
-      landscape_architect_full_name: submissionData.landscapeArchitectFullName,
-      landscape_architect_profession: submissionData.landscapeArchitectProfession,
-      landscape_architect_years_experience: submissionData.landscapeArchitectYearsExperience,
-      landscape_architect_cv: submissionData.landscapeArchitectCV,
-      landscape_architect_diplomas: submissionData.landscapeArchitectDiplomas,
-      landscape_architect_credentials: submissionData.landscapeArchitectCredentials,
-      team_methodology: submissionData.teamMethodology,
-      quality_assurance_plan: submissionData.qualityAssurancePlan,
-      staff_members: submissionData.staffMembers // The array of additional staff
-      // Add any other relevant 'team' fields here
+      members: nestedMembers, // Include the dynamically built nested members
+      methodology: submissionData.teamMethodology, // Keep methodology
+      quality_assurance_plan: submissionData.qualityAssurancePlan, // Keep QA plan
+      staff_members: submissionData.staffMembers // Keep the additional staff array
+      // Remove old flat landscape architect fields
     };
 
     // Prepare the final object for insertion
